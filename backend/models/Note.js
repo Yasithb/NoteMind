@@ -17,8 +17,12 @@ const NoteSchema = new mongoose.Schema(
       default: ""
     },
     tags: [{
-      type: String,
-      trim: true
+      id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Tag"
+      },
+      name: String,
+      color: String
     }],
     user: {
       type: mongoose.Schema.Types.ObjectId,

@@ -1,0 +1,107 @@
+/* TagBadge.css - Simple tag badge for displaying tags in notes */
+.tag-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 12px;
+  margin-right: 6px;
+  margin-bottom: 6px;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  font-family: 'Poppins', sans-serif;
+}
+
+/* Size variants */
+.tag-badge.sm {
+  padding: 2px 6px;
+  border-radius: 10px;
+}
+
+/* .tag-badge.md is the default size */
+
+.tag-badge.lg {
+  padding: 4px 10px;
+  border-radius: 14px;
+}
+
+.tag-badge.clickable {
+  cursor: pointer;
+}
+
+.tag-badge.clickable:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.tag-badge.selected {
+  box-shadow: 0 0 0 2px currentColor;
+  transform: scale(1.05);
+}
+
+.tag-badge-color {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 5px;
+}
+
+/* Size variants for the color dot */
+.tag-badge.sm .tag-badge-color {
+  width: 6px;
+  height: 6px;
+}
+
+.tag-badge.lg .tag-badge-color {
+  width: 10px;
+  height: 10px;
+}
+
+.tag-badge-name {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Size variants for the tag name */
+.tag-badge.sm .tag-badge-name {
+  font-size: 10px;
+}
+
+.tag-badge.lg .tag-badge-name {
+  font-size: 13px;
+}
+
+/* Remove button */
+.tag-badge-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  margin-left: 5px;
+  color: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+  font-size: 10px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.tag-badge-remove:hover {
+  opacity: 1;
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.tag-badge.sm .tag-badge-remove {
+  font-size: 8px;
+  width: 12px;
+  height: 12px;
+}
+
+.tag-badge.lg .tag-badge-remove {
+  font-size: 12px;
+  width: 16px;
+  height: 16px;
+}

@@ -1,34 +1,60 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import Navbar from './components/Navbar'
+import Home from './pages/Home'
+import Login from './pages/Login'
+import Signup from './pages/Signup'
+import Dashboard from './pages/Dashboard'
+import Editor from './pages/Editor'
+import Settings from './pages/Settings'
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    <Router>
+      <div className="app">
+        {/* Only show navbar on the home page */}
+        <Routes>
+          <Route path="/" element={
+            <>
+              <Navbar />
+              <div className="content">
+                <Home />
+              </div>
+            </>
+          } />
+          <Route path="/login" element={
+            <div className="content no-navbar">
+              <Login />
+            </div>
+          } />
+          <Route path="/signup" element={
+            <div className="content no-navbar">
+              <Signup />
+            </div>
+          } />
+          <Route path="/dashboard" element={
+            <div className="content no-navbar">
+              <Dashboard />
+            </div>
+          } />
+          <Route path="/editor" element={
+            <div className="content no-navbar">
+              <Editor />
+            </div>
+          } />
+          <Route path="/editor/:id" element={
+            <div className="content no-navbar">
+              <Editor />
+            </div>
+          } />
+          <Route path="/settings" element={
+            <div className="content no-navbar">
+              <Settings />
+            </div>
+          } />
+        </Routes>
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    </Router>
   )
 }
 

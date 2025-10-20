@@ -1,5 +1,5 @@
-import notes from "../utils/staticNotes.js";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import Note from "../models/Note.js";
+import OpenAI from "openai";
 
 /**
  * @desc    Create a new note
@@ -10,22 +10,16 @@ export const createNote = async (req, res) => {
   try {
     const { title, content, tags, color } = req.body;
 
-    // Create a new note object
-    const note = {
-      id: Date.now().toString(),
+    // Create note in MongoDB
+    const note = await Note.create({
       title,
       content,
       tags: tags || [],
       color: color || "#ffffff",
       user: req.user.id, // From auth middleware
       isPinned: false,
-      summary: "",
-      lastEdited: new Date(),
-      createdAt: new Date()
-    };
-
-    // Add to notes array
-    notes.push(note);
+      summary: ""
+    });
 
     res.status(201).json({
       success: true,
@@ -35,7 +29,8 @@ export const createNote = async (req, res) => {
     console.error("Create note error:", error);
     res.status(500).json({
       success: false,
-      message: "Server error when creating note"
+      message: "Server error when creating note",
+      error: error.message
     });
   }
 };
@@ -50,37 +45,34 @@ export const getNotes = async (req, res) => {
     // Get query parameters
     const { search, tag, sort } = req.query;
     
-    // Filter notes by user
-    let userNotes = notes.filter(note => note.user === req.user.id);
+    // Build query
+    let query = { user: req.user.id };
     
-    // Add search filter if provided
+    // Add text search if provided
     if (search) {
-      const searchLower = search.toLowerCase();
-      userNotes = userNotes.filter(note => 
-        note.title.toLowerCase().includes(searchLower) || 
-        note.content.toLowerCase().includes(searchLower) ||
-        note.tags.some(tag => tag.toLowerCase().includes(searchLower))
-      );
+      query.$text = { $search: search };
     }
     
     // Add tag filter if provided
     if (tag) {
-      userNotes = userNotes.filter(note => 
-        note.tags.includes(tag)
-      );
+      query.tags = tag;
     }
     
-    // Sort notes
+    // Build sort object
+    let sortOptions = {};
     if (sort === 'title') {
-      userNotes.sort((a, b) => a.title.localeCompare(b.title));
+      sortOptions.title = 1; // Ascending
     } else if (sort === 'updated') {
-      userNotes.sort((a, b) => new Date(b.lastEdited) - new Date(a.lastEdited));
+      sortOptions.lastEdited = -1; // Descending
     } else if (sort === 'oldest') {
-      userNotes.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+      sortOptions.createdAt = 1; // Ascending
     } else {
       // Default: newest first
-      userNotes.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      sortOptions.createdAt = -1; // Descending
     }
+    
+    // Execute query with sort
+    const userNotes = await Note.find(query).sort(sortOptions);
 
     res.status(200).json({
       success: true,
@@ -91,7 +83,8 @@ export const getNotes = async (req, res) => {
     console.error("Get notes error:", error);
     res.status(500).json({
       success: false,
-      message: "Server error when retrieving notes"
+      message: "Server error when retrieving notes",
+      error: error.message
     });
   }
 };
@@ -103,7 +96,7 @@ export const getNotes = async (req, res) => {
  */
 export const getNote = async (req, res) => {
   try {
-    const note = notes.find(n => n.id === req.params.id);
+    const note = await Note.findById(req.params.id);
 
     if (!note) {
       return res.status(404).json({
@@ -113,7 +106,7 @@ export const getNote = async (req, res) => {
     }
 
     // Make sure user owns the note
-    if (note.user !== req.user.id) {
+    if (note.user.toString() !== req.user.id) {
       return res.status(401).json({
         success: false,
         message: "Not authorized to access this note"
@@ -128,7 +121,8 @@ export const getNote = async (req, res) => {
     console.error("Get note error:", error);
     res.status(500).json({
       success: false,
-      message: "Server error when retrieving note"
+      message: "Server error when retrieving note",
+      error: error.message
     });
   }
 };
@@ -140,9 +134,9 @@ export const getNote = async (req, res) => {
  */
 export const updateNote = async (req, res) => {
   try {
-    const noteIndex = notes.findIndex(n => n.id === req.params.id);
+    let note = await Note.findById(req.params.id);
 
-    if (noteIndex === -1) {
+    if (!note) {
       return res.status(404).json({
         success: false,
         message: "Note not found"
@@ -150,32 +144,35 @@ export const updateNote = async (req, res) => {
     }
 
     // Make sure user owns the note
-    if (notes[noteIndex].user !== req.user.id) {
+    if (note.user.toString() !== req.user.id) {
       return res.status(401).json({
         success: false,
         message: "Not authorized to update this note"
       });
     }
 
-    // Update note fields
-    const updatedNote = {
-      ...notes[noteIndex],
-      ...req.body,
-      lastEdited: new Date()
-    };
-
-    // Replace note in array
-    notes[noteIndex] = updatedNote;
+    // Update note with new data and set lastEdited timestamp
+    req.body.lastEdited = Date.now();
+    
+    note = await Note.findByIdAndUpdate(
+      req.params.id, 
+      req.body, 
+      {
+        new: true, // Return updated document
+        runValidators: true // Run model validators
+      }
+    );
 
     res.status(200).json({
       success: true,
-      data: updatedNote
+      data: note
     });
   } catch (error) {
     console.error("Update note error:", error);
     res.status(500).json({
       success: false,
-      message: "Server error when updating note"
+      message: "Server error when updating note",
+      error: error.message
     });
   }
 };
@@ -187,9 +184,9 @@ export const updateNote = async (req, res) => {
  */
 export const deleteNote = async (req, res) => {
   try {
-    const noteIndex = notes.findIndex(n => n.id === req.params.id);
+    const note = await Note.findById(req.params.id);
 
-    if (noteIndex === -1) {
+    if (!note) {
       return res.status(404).json({
         success: false,
         message: "Note not found"
@@ -197,15 +194,15 @@ export const deleteNote = async (req, res) => {
     }
 
     // Make sure user owns the note
-    if (notes[noteIndex].user !== req.user.id) {
+    if (note.user.toString() !== req.user.id) {
       return res.status(401).json({
         success: false,
         message: "Not authorized to delete this note"
       });
     }
 
-    // Remove note from array
-    notes.splice(noteIndex, 1);
+    // Remove note from database
+    await note.deleteOne();
 
     res.status(200).json({
       success: true,
@@ -215,7 +212,8 @@ export const deleteNote = async (req, res) => {
     console.error("Delete note error:", error);
     res.status(500).json({
       success: false,
-      message: "Server error when deleting note"
+      message: "Server error when deleting note",
+      error: error.message
     });
   }
 };
@@ -227,7 +225,7 @@ export const deleteNote = async (req, res) => {
  */
 export const summarizeNote = async (req, res) => {
   try {
-    const note = notes.find(n => n.id === req.params.id);
+    const note = await Note.findById(req.params.id);
 
     if (!note) {
       return res.status(404).json({
@@ -237,17 +235,17 @@ export const summarizeNote = async (req, res) => {
     }
 
     // Make sure user owns the note
-    if (note.user !== req.user.id) {
+    if (note.user.toString() !== req.user.id) {
       return res.status(401).json({
         success: false,
         message: "Not authorized to summarize this note"
       });
     }
 
-    // Generate summary using Gemini API
+    // Generate summary using OpenAI API
     try {
       // Get API key from environment variables
-      const apiKey = process.env.GEMINI_API_KEY;
+      const apiKey = process.env.OPENAI_API_KEY;
       
       if (!apiKey) {
         return res.status(400).json({
@@ -256,21 +254,24 @@ export const summarizeNote = async (req, res) => {
         });
       }
       
-      // Initialize Gemini
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      // Initialize OpenAI
+      const openai = new OpenAI({ apiKey });
       
       // Generate prompt for summarization
       const prompt = `Summarize this note in a concise paragraph: ${note.content}`;
       
-      // Generate summary
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const summary = response.text();
+      // Generate summary using OpenAI
+      const completion = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: [{ role: "user", content: prompt }],
+      });
       
-      // Update note with summary
-      const noteIndex = notes.findIndex(n => n.id === req.params.id);
-      notes[noteIndex].summary = summary;
+      const summary = completion.choices[0].message.content;
+      
+      // Update note with summary in database
+      note.summary = summary;
+      note.lastEdited = Date.now();
+      await note.save();
       
       res.status(200).json({
         success: true,
@@ -290,7 +291,8 @@ export const summarizeNote = async (req, res) => {
     console.error("Summarize note error:", error);
     res.status(500).json({
       success: false,
-      message: "Server error when processing note for summarization"
+      message: "Server error when processing note for summarization",
+      error: error.message
     });
   }
 };

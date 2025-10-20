@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import users from "../utils/staticUsers.js";
+import User from "../models/User.js";
 
 /**
  * Authentication middleware to protect routes
@@ -40,8 +40,8 @@ export const protect = async (req, res, next) => {
       
       const decoded = jwt.verify(token, jwtSecret);
 
-      // Get user from in-memory users array
-      const user = users.find(u => u.id === decoded.id);
+      // Get user from database
+      const user = await User.findById(decoded.id);
 
       // If user not found, return unauthorized error
       if (!user) {
@@ -53,6 +53,7 @@ export const protect = async (req, res, next) => {
 
       // Update last active timestamp
       user.lastActive = Date.now();
+      await user.save({ validateBeforeSave: false });
 
       // Attach user to request
       req.user = user;
