@@ -1,0 +1,316 @@
+/* SummarizeNote.css - Styles for the note summarization modal */
+
+.summarize-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease;
+}
+
+.summarize-modal {
+  background-color: #0F1C2E;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+  border: 1px solid rgba(232, 235, 242, 0.1);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.4s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.summarize-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(232, 235, 242, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.summarize-header h2 {
+  font-size: 22px;
+  font-weight: 600;
+  color: #E8EBF2;
+  margin: 0;
+}
+
+.close-button {
+  background: transparent;
+  border: none;
+  color: rgba(232, 235, 242, 0.6);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  transition: all 0.2s ease;
+}
+
+.close-button:hover {
+  background-color: rgba(232, 235, 242, 0.1);
+  color: #E8EBF2;
+}
+
+.summarize-content {
+  padding: 24px;
+  flex-grow: 1;
+}
+
+/* Summarize options section */
+.summarize-options {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.summarize-description {
+  font-size: 16px;
+  line-height: 1.6;
+  color: rgba(232, 235, 242, 0.8);
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+/* Summary length selection */
+.summary-length-options {
+  display: flex;
+  width: 100%;
+  gap: 16px;
+  margin-bottom: 30px;
+}
+
+.length-option {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 8px;
+  background-color: rgba(22, 41, 66, 0.8);
+  border: 1px solid rgba(232, 235, 242, 0.1);
+  border-radius: 8px;
+  color: rgba(232, 235, 242, 0.7);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.length-option:hover {
+  background-color: rgba(22, 41, 66, 1);
+  border-color: rgba(232, 235, 242, 0.2);
+}
+
+.length-option.active {
+  background-color: rgba(22, 101, 216, 0.2);
+  border-color: rgba(22, 101, 216, 0.5);
+  color: #E8EBF2;
+}
+
+.length-option i {
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+
+.length-option span {
+  display: block;
+}
+
+.length-option span:nth-child(2) {
+  font-weight: 600;
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+
+.length-option .length-description {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+/* Error message styling */
+.error-message {
+  background-color: rgba(221, 52, 68, 0.1);
+  color: #DD3444;
+  padding: 12px 16px;
+  border-radius: 6px;
+  border-left: 4px solid #DD3444;
+  margin: 16px 0;
+  font-size: 14px;
+  width: 100%;
+}
+
+/* Generate button */
+.generate-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 24px;
+  background: linear-gradient(135deg, #1665D8 0%, #1357b9 100%);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: 'Poppins', sans-serif;
+  width: 100%;
+  max-width: 250px;
+}
+
+.generate-button:hover:not(:disabled) {
+  box-shadow: 0 5px 15px rgba(22, 101, 216, 0.3);
+  transform: translateY(-2px);
+}
+
+.generate-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Summary Preview Section */
+.summary-preview {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.summary-preview h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #E8EBF2;
+  margin: 0 0 16px 0;
+}
+
+.summary-text {
+  background-color: rgba(22, 41, 66, 0.6);
+  border: 1px solid rgba(232, 235, 242, 0.1);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 24px;
+  color: rgba(232, 235, 242, 0.9);
+  font-size: 16px;
+  line-height: 1.6;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.summary-actions {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.secondary-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 20px;
+  background: transparent;
+  color: rgba(232, 235, 242, 0.8);
+  border: 1px solid rgba(232, 235, 242, 0.2);
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: 'Poppins', sans-serif;
+}
+
+.secondary-button:hover {
+  border-color: rgba(232, 235, 242, 0.4);
+  background-color: rgba(232, 235, 242, 0.05);
+}
+
+.primary-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 24px;
+  background: #1665D8;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: 'Poppins', sans-serif;
+}
+
+.primary-button:hover {
+  background-color: #1357b9;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(22, 101, 216, 0.3);
+}
+
+.accent-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 24px;
+  background: #05D7B3;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: 'Poppins', sans-serif;
+}
+
+.accent-button:hover {
+  background-color: #04c4a3;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(5, 215, 179, 0.3);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Responsive Design */
+@media screen and (max-width: 768px) {
+  .summarize-modal {
+    width: 95%;
+  }
+  
+  .summary-length-options {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .summary-actions {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .secondary-button, .primary-button, .accent-button {
+    width: 100%;
+    max-width: 280px;
+  }
+}

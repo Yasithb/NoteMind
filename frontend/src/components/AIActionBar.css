@@ -1,0 +1,90 @@
+/* AIActionBar.css - Styled to match the screenshot provided */
+
+.ai-action-bar {
+  width: 100%;
+  padding: 20px 0;
+  background-color: rgba(15, 28, 46, 0.4);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.ai-action-title {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 20px;
+  padding: 0 20px;
+}
+
+.ai-actions-container {
+  display: flex;
+  justify-content: space-around;
+  padding: 0 20px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.ai-action-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  padding: 0;
+  width: 80px;
+}
+
+.ai-action-button:hover {
+  transform: translateY(-3px);
+}
+
+.ai-action-button:hover .ai-action-icon {
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.ai-action-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  font-size: 22px;
+  margin-bottom: 10px;
+  transition: all 0.3s ease;
+  background-color: rgba(22, 101, 216, 0.2);
+  color: #1665D8;
+}
+
+.ai-action-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  text-align: center;
+}
+
+/* Responsive Design */
+@media screen and (max-width: 768px) {
+  .ai-actions-container {
+    flex-wrap: wrap;
+    gap: 20px;
+  }
+  
+  .ai-action-button {
+    width: calc(50% - 20px);
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .ai-action-icon {
+    width: 50px;
+    height: 50px;
+    font-size: 18px;
+  }
+  
+  .ai-action-label {
+    font-size: 12px;
+  }
+}

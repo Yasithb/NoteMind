@@ -1,0 +1,41 @@
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+.app {
+  width: 100%;
+  min-height: 100vh;
+  background-color: #0A1929;
+  color: #E8EBF2;
+  font-family: 'Poppins', sans-serif;
+}
+
+.content {
+  padding-top: 0; /* We're using transparent navbar */
+  overflow-x: hidden;
+}
+
+.content.no-navbar {
+  padding-top: 0;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(232, 235, 242, 0.05);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(5, 215, 179, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(5, 215, 179, 0.5);
+}
