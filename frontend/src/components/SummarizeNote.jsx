@@ -62,20 +62,45 @@ const SummarizeNote = ({ noteContent, onClose, onApplySummary }) => {
     } catch (error) {
       console.error('Error generating summary:', error);
       
-      // Check for specific API quota error
-      if (error.message.includes('API quota exceeded')) {
-        setError('API quota exceeded. Using fallback summarizer instead.');
+      // Handle specific error types with helpful messages
+      if (error.message.includes('API key') || error.message.includes('401')) {
+        setError('AI summarization requires a valid OpenAI API key. The system will use local summarization instead.');
         
         // Use fallback client-side summarizer
         try {
           const sentenceCount = getSentenceCountByLength(summaryLength, noteContent);
           const fallbackSummary = generateFallbackSummary(noteContent, sentenceCount);
           
-          // Add note that this is a fallback summary
-          setSummarizedContent(`[FALLBACK SUMMARY] ${fallbackSummary}\n\n(Note: This summary was generated locally due to API limitations. For better results, please update the API key.)`);
+          setSummarizedContent(`${fallbackSummary}\n\n💡 This summary was generated locally. To enable AI-powered summarization:\n\n1. Get an OpenAI API key from https://platform.openai.com/api-keys\n2. Update the backend .env file with your API key\n3. Restart the backend server\n\nLocal summarization will continue to work without an API key.`);
         } catch (fallbackError) {
           console.error('Fallback summarizer error:', fallbackError);
-          setError('Failed to generate summary. Please try again later or update the API key.');
+          setError('Failed to generate summary. Please try again later.');
+        }
+      } else if (error.message.includes('API quota exceeded')) {
+        setError('API quota exceeded. Using local summarizer instead.');
+        
+        // Use fallback client-side summarizer
+        try {
+          const sentenceCount = getSentenceCountByLength(summaryLength, noteContent);
+          const fallbackSummary = generateFallbackSummary(noteContent, sentenceCount);
+          
+          setSummarizedContent(`${fallbackSummary}\n\n⚠️ This summary was generated locally due to API quota limits. To resolve:\n\n1. Check your OpenAI API usage at https://platform.openai.com/usage\n2. Ensure your account has sufficient credits\n3. Consider upgrading your OpenAI plan if needed\n\nLocal summarization will continue to work without API limits.`);
+        } catch (fallbackError) {
+          console.error('Fallback summarizer error:', fallbackError);
+          setError('Failed to generate summary. Please try again later.');
+        }
+      } else if (error.message.includes('fetch')) {
+        setError('Unable to connect to AI service. Using local summarizer instead.');
+        
+        // Use fallback client-side summarizer for network issues
+        try {
+          const sentenceCount = getSentenceCountByLength(summaryLength, noteContent);
+          const fallbackSummary = generateFallbackSummary(noteContent, sentenceCount);
+          
+          setSummarizedContent(`${fallbackSummary}\n\n🌐 This summary was generated locally due to network issues. To resolve:\n\n1. Check that the backend server is running on http://localhost:5000\n2. Ensure your internet connection is stable\n3. Try refreshing the page\n\nLocal summarization works offline and doesn't require a network connection.`);
+        } catch (fallbackError) {
+          console.error('Fallback summarizer error:', fallbackError);
+          setError('Failed to generate summary. Please try again later.');
         }
       } else {
         setError(`Failed to generate summary: ${error.message}`);

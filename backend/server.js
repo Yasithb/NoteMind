@@ -178,7 +178,8 @@ app.post("/api/summarize", async (req, res) => {
       console.log("Error: OpenAI API key not configured");
       return res.status(500).json({ 
         error: "OpenAI API key not configured",
-        details: "Please set your OpenAI API key in the settings."
+        details: "Please set your OpenAI API key in the settings.",
+        code: "NO_API_KEY"
       });
     }
     
@@ -186,6 +187,8 @@ app.post("/api/summarize", async (req, res) => {
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [{ role: "user", content: userPrompt }],
+      max_tokens: 300,
+      temperature: 0.7,
     });
     
     console.log("Received response from OpenAI");
@@ -201,17 +204,37 @@ app.post("/api/summarize", async (req, res) => {
   } catch (error) {
     console.error("Summarization error:", error);
     
+    // Handle specific OpenAI API errors
+    if (error.message && error.message.includes("401")) {
+      return res.status(401).json({
+        error: "Invalid OpenAI API key",
+        details: "The provided OpenAI API key is invalid or expired. Please check your API key configuration.",
+        code: "INVALID_API_KEY"
+      });
+    }
+    
     // Check for quota exceeded error
-    if (error.message && error.message.includes("exceeded") || error.message.includes("quota")) {
+    if (error.message && (error.message.includes("exceeded") || error.message.includes("quota"))) {
       return res.status(429).json({
-        error: "API quota exceeded. Please try again later.",
-        details: "The OpenAI API quota has been exceeded. Please check the API key settings."
+        error: "API quota exceeded",
+        details: "The OpenAI API quota has been exceeded. Please check your billing and usage limits.",
+        code: "QUOTA_EXCEEDED"
+      });
+    }
+    
+    // Handle rate limiting
+    if (error.message && error.message.includes("rate limit")) {
+      return res.status(429).json({
+        error: "Rate limit exceeded",
+        details: "Too many requests to the OpenAI API. Please try again in a moment.",
+        code: "RATE_LIMITED"
       });
     }
     
     res.status(500).json({ 
       error: "Failed to summarize text", 
-      details: error.message 
+      details: error.message,
+      code: "UNKNOWN_ERROR"
     });
   }
 });

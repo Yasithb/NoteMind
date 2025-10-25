@@ -8,6 +8,57 @@ const API_BASE_URL = 'http://127.0.0.1:5000/api';
 const ALTERNATIVE_API_BASE_URL = 'http://localhost:5000/api';
 
 /**
+ * Local summarization function as fallback
+ * @param {string} content - The text to summarize
+ * @param {string} lengthType - 'short', 'medium', or 'long'
+ * @returns {string} - Simple extractive summary
+ */
+const generateLocalSummary = (content, lengthType = 'medium') => {
+  // Simple extractive summarization
+  const sentences = content.match(/[^.!?]+[.!?]+/g) || [];
+  if (sentences.length <= 3) return content;
+  
+  // Determine sentence count based on length preference
+  let sentenceCount;
+  switch (lengthType) {
+    case 'short': sentenceCount = Math.max(1, Math.min(2, Math.ceil(sentences.length * 0.1))); break;
+    case 'long': sentenceCount = Math.max(5, Math.ceil(sentences.length * 0.3)); break;
+    case 'medium': 
+    default: sentenceCount = Math.max(3, Math.ceil(sentences.length * 0.2)); break;
+  }
+  
+  // Score sentences based on position and keywords
+  const scoredSentences = sentences.map((sentence, index) => {
+    let score = 0;
+    
+    // Boost first and last sentences
+    if (index < 2) score += 2;
+    if (index > sentences.length - 3) score += 1;
+    
+    // Boost based on length (prefer medium length)
+    const words = sentence.split(/\s+/).length;
+    if (words > 5 && words < 25) score += 2;
+    
+    // Boost sentences with key phrases
+    const keyPhrases = ['important', 'key', 'main', 'summary', 'conclusion', 'therefore', 'however'];
+    const lowercaseSentence = sentence.toLowerCase();
+    keyPhrases.forEach(phrase => {
+      if (lowercaseSentence.includes(phrase)) score += 2;
+    });
+    
+    return { sentence: sentence.trim(), score, index };
+  });
+  
+  // Select top sentences and maintain order
+  const topSentences = scoredSentences
+    .sort((a, b) => b.score - a.score)
+    .slice(0, sentenceCount)
+    .sort((a, b) => a.index - b.index);
+  
+  return topSentences.map(item => item.sentence).join(' ');
+};
+
+/**
  * Summarizes the provided text using the backend AI service
  * @param {string} text - The text to summarize
  * @param {string} [prompt] - Optional custom prompt for summarization
@@ -18,65 +69,13 @@ export const summarizeText = async (text, prompt) => {
     console.log("Making request to backend API at:", `${API_BASE_URL}/summarize`);
     console.log("Text length:", text.length);
     
-    // Create a local summarization function as fallback
-    const generateLocalSummary = (content) => {
-      // Simple extractive summarization
-      const sentences = content.match(/[^.!?]+[.!?]+/g) || [];
-      if (sentences.length <= 3) return content;
-      
-      // Return first 3 sentences as a simple summary
-      return sentences.slice(0, 3).join(' ');
-    };
+    // Extract length preference from prompt if available
+    let lengthType = 'medium';
+    if (prompt && prompt.toLowerCase().includes('brief')) lengthType = 'short';
+    if (prompt && prompt.toLowerCase().includes('detailed')) lengthType = 'long';
     
-    // Try to contact the server with multiple attempts
-    let pingSuccess = false;
-    
-    // First try the main URL
-    try {
-      console.log("Trying to ping primary endpoint:", API_BASE_URL);
-      const pingResponse = await fetch(`${API_BASE_URL}`, {
-        method: 'GET',
-        headers: { 'Accept': 'application/json' },
-        mode: 'cors'
-      });
-      
-      if (pingResponse.ok) {
-        console.log("Backend server is running");
-        pingSuccess = true;
-      }
-    } catch (primaryError) {
-      console.warn("Failed to connect to primary endpoint:", primaryError);
-    }
-    
-    // If primary failed, try alternative
-    if (!pingSuccess) {
-      try {
-        console.log("Trying to ping alternative endpoint:", ALTERNATIVE_API_BASE_URL);
-        const altPingResponse = await fetch(`${ALTERNATIVE_API_BASE_URL}`, {
-          method: 'GET',
-          headers: { 'Accept': 'application/json' },
-          mode: 'cors'
-        });
-        
-        if (altPingResponse.ok) {
-          console.log("Alternative backend endpoint is responding");
-          pingSuccess = true;
-        }
-      } catch (altError) {
-        console.error("Failed to connect to alternative endpoint:", altError);
-      }
-    }
-    
-    // If server is not reachable, use local summarization
-    if (!pingSuccess) {
-      console.warn("Backend server unreachable, using local summarization");
-      const localSummary = generateLocalSummary(text);
-      return `[LOCAL SUMMARY] ${localSummary}\n\n(This summary was generated locally because the AI service couldn't be reached.)`;
-    }
-    
-    // Server is reachable, make the actual request
-    const apiUrl = pingSuccess ? API_BASE_URL : ALTERNATIVE_API_BASE_URL;
-    const response = await fetch(`${apiUrl}/summarize`, {
+    // Try to contact the server
+    const response = await fetch(`${API_BASE_URL}/summarize`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -95,10 +94,25 @@ export const summarizeText = async (text, prompt) => {
         const errorData = await response.json();
         errorMessage = errorData.error || errorMessage;
         
-        // Handle quota exceeded error specifically
-        if (response.status === 429) {
-          throw new Error('API quota exceeded. Please try again later or update the API key.');
+        // Handle specific API errors and fall back to local summarizer
+        if (response.status === 401 || errorMessage.includes('API key') || errorMessage.includes('401')) {
+          console.warn("API key issue detected, using local summarizer");
+          const localSummary = generateLocalSummary(text, lengthType);
+          return `${localSummary}\n\n💡 Note: This summary was generated locally. To use AI-powered summarization, please configure a valid OpenAI API key in the backend settings.`;
         }
+        
+        if (response.status === 429 || errorMessage.includes('quota')) {
+          console.warn("API quota exceeded, using local summarizer");
+          const localSummary = generateLocalSummary(text, lengthType);
+          return `${localSummary}\n\n⚠️ Note: API quota exceeded. This summary was generated locally. Please check your OpenAI API usage.`;
+        }
+        
+        if (response.status >= 500) {
+          console.warn("Server error, using local summarizer");
+          const localSummary = generateLocalSummary(text, lengthType);
+          return `${localSummary}\n\n🔧 Note: Server error encountered. This summary was generated locally.`;
+        }
+        
       } catch (parseError) {
         console.error('Error parsing error response:', parseError);
       }
@@ -110,6 +124,16 @@ export const summarizeText = async (text, prompt) => {
     return data.summary;
   } catch (error) {
     console.error('Error in summarizeText:', error);
+    
+    // If it's a network error, use local summarizer
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      console.warn("Network error, using local summarizer");
+      const lengthType = prompt && prompt.toLowerCase().includes('brief') ? 'short' : 
+                        prompt && prompt.toLowerCase().includes('detailed') ? 'long' : 'medium';
+      const localSummary = generateLocalSummary(text, lengthType);
+      return `${localSummary}\n\n🌐 Note: Unable to connect to AI service. This summary was generated locally.`;
+    }
+    
     throw error;
   }
 };
