@@ -10,13 +10,30 @@ export const createNote = async (req, res) => {
   try {
     const { title, content, tags, color } = req.body;
 
-    // Create note in MongoDB
+    // ✅ Flexible tag handling (accepts string, string array, or object array)
+    let formattedTags = [];
+    if (Array.isArray(tags)) {
+      formattedTags = tags.map(tag => {
+        if (typeof tag === "string") {
+          return { name: tag, color: "#cccccc" }; // default color
+        }
+        return {
+          name: tag.name || "",
+          color: tag.color || "#cccccc",
+          id: tag.id || undefined
+        };
+      });
+    } else if (typeof tags === "string" && tags.trim() !== "") {
+      formattedTags = [{ name: tags, color: "#cccccc" }];
+    }
+
+    // ✅ Create the note
     const note = await Note.create({
       title,
       content,
-      tags: tags || [],
+      tags: formattedTags,
       color: color || "#ffffff",
-      user: req.user.id, // From auth middleware
+      user: req.user.id,
       isPinned: false,
       summary: ""
     });
@@ -42,36 +59,22 @@ export const createNote = async (req, res) => {
  */
 export const getNotes = async (req, res) => {
   try {
-    // Get query parameters
     const { search, tag, sort } = req.query;
-    
-    // Build query
     let query = { user: req.user.id };
-    
-    // Add text search if provided
-    if (search) {
-      query.$text = { $search: search };
-    }
-    
-    // Add tag filter if provided
-    if (tag) {
-      query.tags = tag;
-    }
-    
-    // Build sort object
+
+    // 🔍 Text search
+    if (search) query.$text = { $search: search };
+
+    // 🏷️ Filter by tag name
+    if (tag) query["tags.name"] = tag;
+
+    // 🔃 Sorting
     let sortOptions = {};
-    if (sort === 'title') {
-      sortOptions.title = 1; // Ascending
-    } else if (sort === 'updated') {
-      sortOptions.lastEdited = -1; // Descending
-    } else if (sort === 'oldest') {
-      sortOptions.createdAt = 1; // Ascending
-    } else {
-      // Default: newest first
-      sortOptions.createdAt = -1; // Descending
-    }
-    
-    // Execute query with sort
+    if (sort === "title") sortOptions.title = 1;
+    else if (sort === "updated") sortOptions.lastEdited = -1;
+    else if (sort === "oldest") sortOptions.createdAt = 1;
+    else sortOptions.createdAt = -1; // newest first
+
     const userNotes = await Note.find(query).sort(sortOptions);
 
     res.status(200).json({
@@ -105,7 +108,7 @@ export const getNote = async (req, res) => {
       });
     }
 
-    // Make sure user owns the note
+    // ✅ Ownership check
     if (note.user.toString() !== req.user.id) {
       return res.status(401).json({
         success: false,
@@ -143,7 +146,7 @@ export const updateNote = async (req, res) => {
       });
     }
 
-    // Make sure user owns the note
+    // ✅ Ownership check
     if (note.user.toString() !== req.user.id) {
       return res.status(401).json({
         success: false,
@@ -151,17 +154,40 @@ export const updateNote = async (req, res) => {
       });
     }
 
-    // Update note with new data and set lastEdited timestamp
-    req.body.lastEdited = Date.now();
-    
-    note = await Note.findByIdAndUpdate(
-      req.params.id, 
-      req.body, 
-      {
-        new: true, // Return updated document
-        runValidators: true // Run model validators
-      }
-    );
+    const { title, content, tags, color, isPinned } = req.body;
+
+    // ✅ Handle tags (same flexible logic as create)
+    let formattedTags = [];
+    if (Array.isArray(tags)) {
+      formattedTags = tags.map(tag => {
+        if (typeof tag === "string") {
+          return { name: tag, color: "#cccccc" };
+        }
+        return {
+          name: tag.name || "",
+          color: tag.color || "#cccccc",
+          id: tag.id || undefined
+        };
+      });
+    } else if (typeof tags === "string" && tags.trim() !== "") {
+      formattedTags = [{ name: tags, color: "#cccccc" }];
+    }
+
+    // ✅ Prepare update fields
+    const updateFields = {
+      ...(title && { title }),
+      ...(content && { content }),
+      ...(color && { color }),
+      ...(typeof isPinned !== "undefined" && { isPinned }),
+      ...(formattedTags.length && { tags: formattedTags }),
+      lastEdited: Date.now()
+    };
+
+    // ✅ Update in DB
+    note = await Note.findByIdAndUpdate(req.params.id, updateFields, {
+      new: true,
+      runValidators: true
+    });
 
     res.status(200).json({
       success: true,
@@ -193,7 +219,7 @@ export const deleteNote = async (req, res) => {
       });
     }
 
-    // Make sure user owns the note
+    // ✅ Ownership check
     if (note.user.toString() !== req.user.id) {
       return res.status(401).json({
         success: false,
@@ -201,11 +227,11 @@ export const deleteNote = async (req, res) => {
       });
     }
 
-    // Remove note from database
     await note.deleteOne();
 
     res.status(200).json({
       success: true,
+      message: "Note deleted successfully",
       data: {}
     });
   } catch (error) {
@@ -219,7 +245,7 @@ export const deleteNote = async (req, res) => {
 };
 
 /**
- * @desc    Summarize note content using AI
+ * @desc    Summarize note content using OpenAI API
  * @route   POST /api/notes/:id/summarize
  * @access  Private
  */
@@ -234,7 +260,7 @@ export const summarizeNote = async (req, res) => {
       });
     }
 
-    // Make sure user owns the note
+    // ✅ Ownership check
     if (note.user.toString() !== req.user.id) {
       return res.status(401).json({
         success: false,
@@ -242,56 +268,39 @@ export const summarizeNote = async (req, res) => {
       });
     }
 
-    // Generate summary using OpenAI API
-    try {
-      // Get API key from environment variables
-      const apiKey = process.env.OPENAI_API_KEY;
-      
-      if (!apiKey) {
-        return res.status(400).json({
-          success: false,
-          message: "API key not found in environment variables"
-        });
-      }
-      
-      // Initialize OpenAI
-      const openai = new OpenAI({ apiKey });
-      
-      // Generate prompt for summarization
-      const prompt = `Summarize this note in a concise paragraph: ${note.content}`;
-      
-      // Generate summary using OpenAI
-      const completion = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
-        messages: [{ role: "user", content: prompt }],
-      });
-      
-      const summary = completion.choices[0].message.content;
-      
-      // Update note with summary in database
-      note.summary = summary;
-      note.lastEdited = Date.now();
-      await note.save();
-      
-      res.status(200).json({
-        success: true,
-        data: {
-          summary
-        }
-      });
-    } catch (error) {
-      console.error("AI summarization error:", error);
-      res.status(500).json({
+    // ✅ AI summarization
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      return res.status(400).json({
         success: false,
-        message: "Failed to summarize note with AI",
-        error: error.message
+        message: "OpenAI API key missing in environment variables"
       });
     }
+
+    const openai = new OpenAI({ apiKey });
+
+    const prompt = `Summarize this note in a concise paragraph:\n\n${note.content}`;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [{ role: "user", content: prompt }]
+    });
+
+    const summary = completion.choices[0].message.content;
+
+    note.summary = summary;
+    note.lastEdited = Date.now();
+    await note.save();
+
+    res.status(200).json({
+      success: true,
+      data: { summary }
+    });
   } catch (error) {
     console.error("Summarize note error:", error);
     res.status(500).json({
       success: false,
-      message: "Server error when processing note for summarization",
+      message: "Server error during summarization",
       error: error.message
     });
   }

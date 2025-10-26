@@ -16,14 +16,16 @@ const NoteSchema = new mongoose.Schema(
       type: String,
       default: ""
     },
-    tags: [{
-      id: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Tag"
-      },
-      name: String,
-      color: String
-    }],
+    tags: [
+      {
+        id: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Tag"
+        },
+        name: { type: String, trim: true },
+        color: { type: String, default: "#cccccc" }
+      }
+    ],
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -47,7 +49,7 @@ const NoteSchema = new mongoose.Schema(
   }
 );
 
-// Add text index for search functionality
-NoteSchema.index({ title: 'text', content: 'text', tags: 'text' });
+// Text index for search
+NoteSchema.index({ title: "text", content: "text", "tags.name": "text" });
 
 export default mongoose.model("Note", NoteSchema);
